@@ -18,31 +18,51 @@ export async function POST(request: NextRequest) {
 
   const date = dateRows[0].report_date
 
-  const { data: rows } = await supabase
-    .from('daily_brand_report')
-    .select('*')
-    .eq('report_date', date)
-    .order('new_videos', { ascending: false })
+  // Fetch today and yesterday in parallel
+  const [{ data: rows }, { data: prevDateRows }] = await Promise.all([
+    supabase.from('daily_brand_report').select('*').eq('report_date', date),
+    supabase
+      .from('daily_brand_report')
+      .select('report_date')
+      .lt('report_date', date)
+      .order('report_date', { ascending: false })
+      .limit(1),
+  ])
 
   if (!rows?.length) return NextResponse.json({ error: 'No data for date' }, { status: 404 })
 
-  const totalVideos = rows.reduce((s, r) => s + (r.new_videos ?? 0), 0)
-  const totalGmv = rows.reduce((s, r) => s + (r.gmv ?? 0), 0)
-  const totalSampleReq = rows.reduce((s, r) => s + (r.sample_request ?? 0), 0)
-  const totalTpSent = rows.reduce((s, r) => s + (r.tp_sent ?? 0), 0)
+  const prevDate = prevDateRows?.[0]?.report_date ?? null
+  const { data: prevRows } = prevDate
+    ? await supabase.from('daily_brand_report').select('*').eq('report_date', prevDate)
+    : { data: null }
+
+  // Aggregate today
+  const sum = (arr: typeof rows, key: keyof typeof rows[0]) =>
+    arr.reduce((s, r) => s + ((r[key] as number) ?? 0), 0)
+
+  const totalVideos = sum(rows, 'new_videos')
+  const totalGmv = sum(rows, 'gmv')
+  const totalSampleReq = sum(rows, 'sample_request')
+  const totalTpSent = sum(rows, 'tp_sent')
+  const totalL3 = sum(rows, 'l3_plus')
   const activeBrands = rows.filter((r) => (r.new_videos ?? 0) > 0).length
 
-  // DoD stats — only brands that have both dod and new_videos
-  const dodRows = rows.filter((r) => r.dod != null && (r.new_videos ?? 0) > 0)
-  const dodUp = dodRows.filter((r) => r.dod! > 0).length
-  const dodDown = dodRows.filter((r) => r.dod! < 0).length
-  const dodFlat = dodRows.filter((r) => r.dod === 0).length
-  const avgDod = dodRows.length
-    ? dodRows.reduce((s, r) => s + r.dod!, 0) / dodRows.length
-    : null
-  const avgDodStr = avgDod != null
-    ? `${avgDod >= 0 ? '+' : ''}${(avgDod * 100).toFixed(1)}%`
-    : '—'
+  // Aggregate yesterday
+  const prevVideos = prevRows ? sum(prevRows, 'new_videos') : null
+  const prevGmv = prevRows ? sum(prevRows, 'gmv') : null
+  const prevSampleReq = prevRows ? sum(prevRows, 'sample_request') : null
+  const prevTpSent = prevRows ? sum(prevRows, 'tp_sent') : null
+  const prevL3 = prevRows ? sum(prevRows, 'l3_plus') : null
+  const prevActiveBrands = prevRows ? prevRows.filter((r) => (r.new_videos ?? 0) > 0).length : null
+
+  // Format helpers
+  const dod = (cur: number, prev: number | null) => {
+    if (prev == null || prev === 0) return ''
+    const pct = ((cur - prev) / prev) * 100
+    return pct >= 0 ? ` ▲ +${pct.toFixed(1)}%` : ` ▼ ${pct.toFixed(1)}%`
+  }
+  const num = (n: number) => n.toLocaleString('en-US')
+  const usd = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.vercel.app'
 
@@ -58,21 +78,12 @@ export async function POST(request: NextRequest) {
         {
           tag: 'div',
           fields: [
-            { is_short: true, text: { tag: 'lark_md', content: `**Active Brands**\n${activeBrands}` } },
-            { is_short: true, text: { tag: 'lark_md', content: `**New Videos**\n${totalVideos.toLocaleString()}` } },
-            { is_short: true, text: { tag: 'lark_md', content: `**Total GMV**\n$${totalGmv.toLocaleString('en-US', { maximumFractionDigits: 0 })}` } },
-            { is_short: true, text: { tag: 'lark_md', content: `**Sample Requests**\n${totalSampleReq.toLocaleString()}` } },
-            { is_short: true, text: { tag: 'lark_md', content: `**TP Outreach**\n${totalTpSent.toLocaleString()}` } },
-          ],
-        },
-        { tag: 'hr' },
-        {
-          tag: 'div',
-          fields: [
-            { is_short: true, text: { tag: 'lark_md', content: `**DoD ↑ Brands**\n${dodUp}` } },
-            { is_short: true, text: { tag: 'lark_md', content: `**DoD ↓ Brands**\n${dodDown}` } },
-            { is_short: true, text: { tag: 'lark_md', content: `**DoD — Flat**\n${dodFlat}` } },
-            { is_short: true, text: { tag: 'lark_md', content: `**Avg DoD**\n${avgDodStr}` } },
+            { is_short: true, text: { tag: 'lark_md', content: `**Brands**\n${activeBrands}${dod(activeBrands, prevActiveBrands)}` } },
+            { is_short: true, text: { tag: 'lark_md', content: `**New Videos**\n${num(totalVideos)}${dod(totalVideos, prevVideos)}` } },
+            { is_short: true, text: { tag: 'lark_md', content: `**L3+ Videos**\n${num(totalL3)}${dod(totalL3, prevL3)}` } },
+            { is_short: true, text: { tag: 'lark_md', content: `**Total GMV**\n${usd(totalGmv)}${dod(totalGmv, prevGmv)}` } },
+            { is_short: true, text: { tag: 'lark_md', content: `**Sample Requests**\n${num(totalSampleReq)}${dod(totalSampleReq, prevSampleReq)}` } },
+            { is_short: true, text: { tag: 'lark_md', content: `**TP Outreach**\n${num(totalTpSent)}${dod(totalTpSent, prevTpSent)}` } },
           ],
         },
         { tag: 'hr' },
