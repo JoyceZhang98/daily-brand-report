@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   const totalSampleReq = sum(rows, 'sample_request')
   const totalTpSent = sum(rows, 'tp_sent')
   const totalL3 = sum(rows, 'l3_plus')
-  const activeBrands = rows.filter((r) => (r.new_videos ?? 0) > 0).length
+  const activeBrands = rows.length
 
   // Aggregate yesterday
   const prevVideos = prevRows ? sum(prevRows, 'new_videos') : null
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   const prevSampleReq = prevRows ? sum(prevRows, 'sample_request') : null
   const prevTpSent = prevRows ? sum(prevRows, 'tp_sent') : null
   const prevL3 = prevRows ? sum(prevRows, 'l3_plus') : null
-  const prevActiveBrands = prevRows ? prevRows.filter((r) => (r.new_videos ?? 0) > 0).length : null
+  const prevActiveBrands = prevRows ? prevRows.length : null
 
   // Format helpers
   const dod = (cur: number, prev: number | null) => {
