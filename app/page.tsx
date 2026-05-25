@@ -179,12 +179,11 @@ export default function Home() {
             <tbody>
               {filtered.map((r, i) => {
                 const dod = fmtDod(r.dod)
-                const rowBg = i % 2 === 0 ? 'bg-gray-950' : 'bg-gray-900'
-                const stickyBg = i % 2 === 0 ? 'bg-gray-950 group-hover:bg-gray-800' : 'bg-gray-900 group-hover:bg-gray-800'
+                const rowColor = i % 2 === 0 ? '#030712' : '#111827'
                 return (
-                  <tr key={r.brand_name} className={`group ${rowBg} hover:bg-gray-800 border-b border-gray-800 transition-colors`}>
-                    <td className="px-2 py-1.5 text-gray-600 text-right">{i + 1}</td>
-                    <td className={`px-2 py-1.5 font-medium text-white sticky left-0 min-w-[160px] max-w-[200px] truncate transition-colors ${stickyBg}`} title={r.brand_name}>
+                  <tr key={r.brand_name} style={{ backgroundColor: rowColor }} className="hover:bg-gray-800 border-b border-gray-800 transition-colors">
+                    <td className="px-2 py-1.5 text-gray-400 text-right">{i + 1}</td>
+                    <td className="px-2 py-1.5 font-medium text-white sticky left-0 min-w-[160px] max-w-[200px] truncate" style={{ backgroundColor: rowColor }} title={r.brand_name}>
                       {r.brand_name}
                     </td>
 
