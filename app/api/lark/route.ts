@@ -32,6 +32,18 @@ export async function POST(request: NextRequest) {
   const totalTpSent = rows.reduce((s, r) => s + (r.tp_sent ?? 0), 0)
   const activeBrands = rows.filter((r) => (r.new_videos ?? 0) > 0).length
 
+  // DoD stats — only brands that have both dod and new_videos
+  const dodRows = rows.filter((r) => r.dod != null && (r.new_videos ?? 0) > 0)
+  const dodUp = dodRows.filter((r) => r.dod! > 0).length
+  const dodDown = dodRows.filter((r) => r.dod! < 0).length
+  const dodFlat = dodRows.filter((r) => r.dod === 0).length
+  const avgDod = dodRows.length
+    ? dodRows.reduce((s, r) => s + r.dod!, 0) / dodRows.length
+    : null
+  const avgDodStr = avgDod != null
+    ? `${avgDod >= 0 ? '+' : ''}${(avgDod * 100).toFixed(1)}%`
+    : '—'
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.vercel.app'
 
   const body = {
@@ -51,6 +63,16 @@ export async function POST(request: NextRequest) {
             { is_short: true, text: { tag: 'lark_md', content: `**Total GMV**\n$${totalGmv.toLocaleString('en-US', { maximumFractionDigits: 0 })}` } },
             { is_short: true, text: { tag: 'lark_md', content: `**Sample Requests**\n${totalSampleReq.toLocaleString()}` } },
             { is_short: true, text: { tag: 'lark_md', content: `**TP Outreach**\n${totalTpSent.toLocaleString()}` } },
+          ],
+        },
+        { tag: 'hr' },
+        {
+          tag: 'div',
+          fields: [
+            { is_short: true, text: { tag: 'lark_md', content: `**DoD ↑ Brands**\n${dodUp}` } },
+            { is_short: true, text: { tag: 'lark_md', content: `**DoD ↓ Brands**\n${dodDown}` } },
+            { is_short: true, text: { tag: 'lark_md', content: `**DoD — Flat**\n${dodFlat}` } },
+            { is_short: true, text: { tag: 'lark_md', content: `**Avg DoD**\n${avgDodStr}` } },
           ],
         },
         { tag: 'hr' },
