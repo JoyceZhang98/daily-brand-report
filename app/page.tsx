@@ -98,8 +98,8 @@ export default function Home() {
   )
 
   return (
-    <main className="min-h-screen bg-gray-950 text-gray-100 font-mono text-xs">
-      <div className="sticky top-0 z-20 bg-gray-900 border-b border-gray-700 px-4 py-3 flex flex-wrap items-center gap-4">
+    <div className="h-screen flex flex-col bg-gray-950 text-gray-100 font-mono text-xs">
+      <div className="flex-none bg-gray-900 border-b border-gray-700 px-4 py-3 flex flex-wrap items-center gap-4 z-20">
         <div>
           <div className="text-lg font-bold text-white">Daily Brand Report</div>
           <div className="text-gray-400 text-xs">{rows.length} brands</div>
@@ -141,39 +141,36 @@ export default function Home() {
       )}
 
       {!loading && filtered.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="flex-1 overflow-auto">
           <table className="w-full border-collapse text-xs">
-            <thead className="bg-gray-800">
+            <thead className="bg-gray-800 sticky top-0 z-10">
               <tr className="text-gray-300 border-b border-gray-700">
-                <th className="px-2 py-1 text-left text-gray-500 bg-gray-800 sticky top-[57px] z-20" rowSpan={2}>#</th>
-                <th className="px-2 py-1 text-left bg-gray-800 sticky top-[57px] left-0 z-30" rowSpan={2}>Brand</th>
-                <th colSpan={3} className="px-2 py-1 text-center border-l border-gray-700 text-blue-400 bg-gray-800 sticky top-[57px] z-20">VIDEO</th>
-                <th colSpan={4} className="px-2 py-1 text-center border-l border-gray-700 text-purple-400 bg-gray-800 sticky top-[57px] z-20">CREATOR</th>
-                <th colSpan={4} className="px-2 py-1 text-center border-l border-gray-700 text-green-400 bg-gray-800 sticky top-[57px] z-20">SAMPLES</th>
-                <th colSpan={8} className="px-2 py-1 text-center border-l border-gray-700 text-yellow-400 bg-gray-800 sticky top-[57px] z-20">DATA & PERFORMANCE</th>
+                <th className="px-2 py-1 text-left text-gray-500 bg-gray-800" rowSpan={2}>#</th>
+                <th className="px-2 py-1 text-left bg-gray-800 sticky left-0 z-10" rowSpan={2}>Brand</th>
+                <th colSpan={3} className="px-2 py-1 text-center border-l border-gray-700 text-blue-400">VIDEO</th>
+                <th colSpan={4} className="px-2 py-1 text-center border-l border-gray-700 text-purple-400">CREATOR</th>
+                <th colSpan={4} className="px-2 py-1 text-center border-l border-gray-700 text-green-400">SAMPLES</th>
+                <th colSpan={8} className="px-2 py-1 text-center border-l border-gray-700 text-yellow-400">DATA & PERFORMANCE</th>
               </tr>
               <tr className="text-gray-400 border-b border-gray-600">
-                <Th col="new_videos" label="New Videos" className="border-l border-gray-700 bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="dod" label="DoD%" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="l3_plus" label="L3+ Vids" className="bg-gray-800 sticky top-[82px] z-20" />
-
-                <Th col="tp_sent" label="TP Outreach" className="border-l border-gray-700 bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="tp_creator_count" label="TP L3+" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="tp_accepted" label="L3+ Accept" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="tp_accept_rate" label="L3+ Accept%" className="bg-gray-800 sticky top-[82px] z-20" />
-
-                <Th col="sample_request" label="Sample Req" className="border-l border-gray-700 bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="sample_approved" label="Approved" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="l3_sample" label="L3+ Req" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="l3_sample_approved" label="L3+ App%" className="bg-gray-800 sticky top-[82px] z-20" />
-
-                <Th col="gmv" label="GMV" className="border-l border-gray-700 bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="video_ctr" label="Video CTR" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="video_ctor" label="Video CTOR" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="aov" label="AOV" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="video_gmv_pct" label="Video GMV%" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="live_gmv_pct" label="Live GMV%" className="bg-gray-800 sticky top-[82px] z-20" />
-                <Th col="product_card_gmv_pct" label="Card GMV%" className="bg-gray-800 sticky top-[82px] z-20" />
+                <Th col="new_videos" label="New Videos" className="border-l border-gray-700" />
+                <Th col="dod" label="DoD%" />
+                <Th col="l3_plus" label="L3+ Vids" />
+                <Th col="tp_sent" label="TP Outreach" className="border-l border-gray-700" />
+                <Th col="tp_creator_count" label="TP L3+" />
+                <Th col="tp_accepted" label="L3+ Accept" />
+                <Th col="tp_accept_rate" label="L3+ Accept%" />
+                <Th col="sample_request" label="Sample Req" className="border-l border-gray-700" />
+                <Th col="sample_approved" label="Approved" />
+                <Th col="l3_sample" label="L3+ Req" />
+                <Th col="l3_sample_approved" label="L3+ App%" />
+                <Th col="gmv" label="GMV" className="border-l border-gray-700" />
+                <Th col="video_ctr" label="Video CTR" />
+                <Th col="video_ctor" label="Video CTOR" />
+                <Th col="aov" label="AOV" />
+                <Th col="video_gmv_pct" label="Video GMV%" />
+                <Th col="live_gmv_pct" label="Live GMV%" />
+                <Th col="product_card_gmv_pct" label="Card GMV%" />
               </tr>
             </thead>
             <tbody>
@@ -254,6 +251,6 @@ export default function Home() {
           No data for {selectedDate}
         </div>
       )}
-    </main>
+    </div>
   )
 }
