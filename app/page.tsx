@@ -1,65 +1,259 @@
-import Image from "next/image";
+'use client'
+
+import { useEffect, useState, useMemo } from 'react'
+import type { BrandReport } from '@/lib/supabase'
+
+const fmt = (n: number | null, decimals = 0) =>
+  n == null ? '—' : n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+
+const fmtPct = (n: number | null) =>
+  n == null ? '—' : `${(n * 100).toFixed(1)}%`
+
+const fmtUSD = (n: number | null) =>
+  n == null ? '—' : `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+const fmtDod = (n: number | null) => {
+  if (n == null) return null
+  const pct = (n * 100).toFixed(1)
+  return { text: `${n > 0 ? '+' : ''}${pct}%`, up: n >= 0 }
+}
+
+type SortKey = keyof BrandReport
+type SortDir = 'asc' | 'desc'
 
 export default function Home() {
+  const [dates, setDates] = useState<string[]>([])
+  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [rows, setRows] = useState<BrandReport[]>([])
+  const [loading, setLoading] = useState(false)
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('new_videos')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+
+  useEffect(() => {
+    fetch('/api/dates')
+      .then((r) => r.json())
+      .then((d: string[]) => {
+        setDates(d)
+        if (d.length) setSelectedDate(d[0])
+      })
+  }, [])
+
+  useEffect(() => {
+    if (!selectedDate) return
+    setLoading(true)
+    fetch(`/api/report?date=${selectedDate}`)
+      .then((r) => r.json())
+      .then((d: BrandReport[]) => { setRows(d); setLoading(false) })
+  }, [selectedDate])
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir('desc') }
+  }
+
+  const filtered = useMemo(() => {
+    let r = rows
+    if (search) r = r.filter(x => x.brand_name.toLowerCase().includes(search.toLowerCase()))
+    r = [...r].sort((a, b) => {
+      const av = a[sortKey] as number | null
+      const bv = b[sortKey] as number | null
+      if (av == null && bv == null) return 0
+      if (av == null) return 1
+      if (bv == null) return -1
+      return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1)
+    })
+    return r
+  }, [rows, search, sortKey, sortDir])
+
+  const totals = useMemo(() => {
+    const sum = (key: keyof BrandReport) => rows.reduce((s, r) => s + ((r[key] as number) ?? 0), 0)
+    return {
+      new_videos: sum('new_videos'),
+      l3_plus: sum('l3_plus'),
+      tp_sent: sum('tp_sent'),
+      tp_creator_count: sum('tp_creator_count'),
+      tp_accepted: sum('tp_accepted'),
+      sample_request: sum('sample_request'),
+      sample_approved: sum('sample_approved'),
+      l3_sample: sum('l3_sample'),
+      l3_sample_approved: sum('l3_sample_approved'),
+      gmv: sum('gmv'),
+    }
+  }, [rows])
+
+  const SortIcon = ({ col }: { col: SortKey }) => (
+    <span className="ml-1 opacity-50 text-xs">
+      {sortKey === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+    </span>
+  )
+
+  const Th = ({ col, label, className = '' }: { col: SortKey; label: string; className?: string }) => (
+    <th
+      onClick={() => handleSort(col)}
+      className={`px-2 py-2 text-center cursor-pointer hover:bg-gray-700 whitespace-nowrap select-none ${className}`}
+    >
+      {label}<SortIcon col={col} />
+    </th>
+  )
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="min-h-screen bg-gray-950 text-gray-100 font-mono text-xs">
+      <div className="sticky top-0 z-20 bg-gray-900 border-b border-gray-700 px-4 py-3 flex flex-wrap items-center gap-4">
+        <div>
+          <div className="text-lg font-bold text-white">Daily Brand Report</div>
+          <div className="text-gray-400 text-xs">{rows.length} brands</div>
+        </div>
+
+        <select
+          value={selectedDate}
+          onChange={e => setSelectedDate(e.target.value)}
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm focus:outline-none focus:border-blue-500"
+        >
+          {dates.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+
+        <input
+          type="text"
+          placeholder="Search brand…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm focus:outline-none focus:border-blue-500 w-48"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+
+        <div className="flex gap-4 ml-auto flex-wrap">
+          {[
+            { label: 'New Videos', value: fmt(totals.new_videos) },
+            { label: 'Total GMV', value: fmtUSD(totals.gmv) },
+            { label: 'Sample Req', value: fmt(totals.sample_request) },
+            { label: 'TP Outreach', value: fmt(totals.tp_sent) },
+          ].map(({ label, value }) => (
+            <div key={label} className="text-center">
+              <div className="text-gray-400 text-xs">{label}</div>
+              <div className="text-white font-bold text-sm">{value}</div>
+            </div>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+
+      {loading && (
+        <div className="flex justify-center items-center h-64 text-gray-400">Loading…</div>
+      )}
+
+      {!loading && filtered.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-xs">
+            <thead className="bg-gray-800 sticky top-[57px] z-10">
+              <tr className="text-gray-300 border-b border-gray-700">
+                <th className="px-2 py-1 text-left text-gray-500" rowSpan={2}>#</th>
+                <th className="px-2 py-1 text-left sticky left-0 bg-gray-800 z-10" rowSpan={2}>Brand</th>
+                <th colSpan={3} className="px-2 py-1 text-center border-l border-gray-700 text-blue-400">VIDEO</th>
+                <th colSpan={4} className="px-2 py-1 text-center border-l border-gray-700 text-purple-400">CREATOR</th>
+                <th colSpan={4} className="px-2 py-1 text-center border-l border-gray-700 text-green-400">SAMPLES</th>
+                <th colSpan={8} className="px-2 py-1 text-center border-l border-gray-700 text-yellow-400">DATA & PERFORMANCE</th>
+              </tr>
+              <tr className="text-gray-400 border-b border-gray-600">
+                <Th col="new_videos" label="New Videos" className="border-l border-gray-700" />
+                <Th col="dod" label="DoD%" />
+                <Th col="l3_plus" label="L3+ Vids" />
+
+                <Th col="tp_sent" label="TP Outreach" className="border-l border-gray-700" />
+                <Th col="tp_creator_count" label="TP L3+" />
+                <Th col="tp_accepted" label="L3+ Accept" />
+                <Th col="tp_accept_rate" label="L3+ Accept%" />
+
+                <Th col="sample_request" label="Sample Req" className="border-l border-gray-700" />
+                <Th col="sample_approved" label="Approved" />
+                <Th col="l3_sample" label="L3+ Req" />
+                <Th col="l3_sample_approved" label="L3+ App%" />
+
+                <Th col="gmv" label="GMV" className="border-l border-gray-700" />
+                <Th col="video_ctr" label="Video CTR" />
+                <Th col="video_ctor" label="Video CTOR" />
+                <Th col="aov" label="AOV" />
+                <Th col="video_gmv_pct" label="Video GMV%" />
+                <Th col="live_gmv_pct" label="Live GMV%" />
+                <Th col="product_card_gmv_pct" label="Card GMV%" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r, i) => {
+                const dod = fmtDod(r.dod)
+                const rowBg = i % 2 === 0 ? 'bg-gray-950' : 'bg-gray-900'
+                return (
+                  <tr key={r.brand_name} className={`${rowBg} hover:bg-gray-800 border-b border-gray-800 transition-colors`}>
+                    <td className="px-2 py-1.5 text-gray-600 text-right">{i + 1}</td>
+                    <td className="px-2 py-1.5 font-medium text-white sticky left-0 bg-inherit min-w-[160px] max-w-[200px] truncate" title={r.brand_name}>
+                      {r.brand_name}
+                    </td>
+
+                    <td className="px-2 py-1.5 text-center border-l border-gray-800 text-white font-medium">
+                      {r.new_videos ?? '—'}
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      {dod ? (
+                        <span className={`font-medium ${dod.up ? 'text-green-400' : 'text-red-400'}`}>
+                          {dod.text}
+                        </span>
+                      ) : '—'}
+                    </td>
+                    <td className="px-2 py-1.5 text-center">{r.l3_plus ?? '—'}</td>
+
+                    <td className="px-2 py-1.5 text-center border-l border-gray-800">{fmt(r.tp_sent)}</td>
+                    <td className="px-2 py-1.5 text-center">{fmt(r.tp_creator_count)}</td>
+                    <td className="px-2 py-1.5 text-center">{fmt(r.tp_accepted)}</td>
+                    <td className="px-2 py-1.5 text-center">{fmtPct(r.tp_accept_rate)}</td>
+
+                    <td className="px-2 py-1.5 text-center border-l border-gray-800">{fmt(r.sample_request)}</td>
+                    <td className="px-2 py-1.5 text-center">{fmt(r.sample_approved)}</td>
+                    <td className="px-2 py-1.5 text-center">{fmt(r.l3_sample)}</td>
+                    <td className="px-2 py-1.5 text-center">
+                      {r.l3_sample_approved_pct != null ? (
+                        <span className={r.l3_sample_approved_pct > 0.1 ? 'text-green-400' : ''}>
+                          {fmtPct(r.l3_sample_approved_pct)}
+                        </span>
+                      ) : '—'}
+                    </td>
+
+                    <td className="px-2 py-1.5 text-right border-l border-gray-800 text-yellow-300 font-medium">
+                      {fmtUSD(r.gmv)}
+                    </td>
+                    <td className="px-2 py-1.5 text-center">{fmtPct(r.video_ctr)}</td>
+                    <td className="px-2 py-1.5 text-center">{fmtPct(r.video_ctor)}</td>
+                    <td className="px-2 py-1.5 text-right">{fmtUSD(r.aov)}</td>
+                    <td className="px-2 py-1.5 text-center">{fmtPct(r.video_gmv_pct)}</td>
+                    <td className="px-2 py-1.5 text-center">{fmtPct(r.live_gmv_pct)}</td>
+                    <td className="px-2 py-1.5 text-center">{fmtPct(r.product_card_gmv_pct)}</td>
+                  </tr>
+                )
+              })}
+
+              <tr className="bg-gray-800 border-t-2 border-gray-500 font-bold text-white">
+                <td className="px-2 py-2 text-gray-400" colSpan={2}>TOTAL ({filtered.length})</td>
+                <td className="px-2 py-2 text-center border-l border-gray-600">{fmt(totals.new_videos)}</td>
+                <td className="px-2 py-2 text-center">—</td>
+                <td className="px-2 py-2 text-center">{fmt(totals.l3_plus)}</td>
+                <td className="px-2 py-2 text-center border-l border-gray-600">{fmt(totals.tp_sent)}</td>
+                <td className="px-2 py-2 text-center">{fmt(totals.tp_creator_count)}</td>
+                <td className="px-2 py-2 text-center">{fmt(totals.tp_accepted)}</td>
+                <td className="px-2 py-2 text-center">—</td>
+                <td className="px-2 py-2 text-center border-l border-gray-600">{fmt(totals.sample_request)}</td>
+                <td className="px-2 py-2 text-center">{fmt(totals.sample_approved)}</td>
+                <td className="px-2 py-2 text-center">{fmt(totals.l3_sample)}</td>
+                <td className="px-2 py-2 text-center">{fmt(totals.l3_sample_approved)}</td>
+                <td className="px-2 py-2 text-right border-l border-gray-600 text-yellow-300">{fmtUSD(totals.gmv)}</td>
+                <td colSpan={6} />
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </main>
-    </div>
-  );
+      )}
+
+      {!loading && filtered.length === 0 && selectedDate && (
+        <div className="flex justify-center items-center h-64 text-gray-500">
+          No data for {selectedDate}
+        </div>
+      )}
+    </main>
+  )
 }
