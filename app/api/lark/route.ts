@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   const webhookUrl = process.env.LARK_WEBHOOK_URL
   if (!webhookUrl) return NextResponse.json({ error: 'LARK_WEBHOOK_URL not set' }, { status: 500 })
